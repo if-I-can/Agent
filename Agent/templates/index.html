@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>世龙Agentweb</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="chat-container">
+            <div id="chat-window" class="chat-window"></div>
+            <div class="input-container">
+                <input id="user-input" type="text" placeholder="Type your message..." autofocus>
+                <button id="send-button">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            // Function to append messages to the chat window
+            function appendMessage(message, sender) {
+                $('#chat-window').append(
+                    '<div class="message ' + sender + '"><span>' + message + '</span></div>'
+                );
+                $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight); // Auto scroll
+            }
+
+            // Handle send button click
+            $('#send-button').click(function () {
+                let userInput = $('#user-input').val();
+                
+                if (userInput.trim() !== '') {
+                    appendMessage(userInput, 'user'); // Show user message
+                    $('#user-input').val(''); // Clear input
+
+                    // Call the backend API
+                    $.ajax({
+                        url: '/api/agent',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ input: userInput }),
+                        success: function (data) {
+                            appendMessage(data.output, 'agent'); // Show agent response
+                        },
+                        error: function (xhr) {
+                            appendMessage('Error: ' + xhr.responseJSON.error, 'error'); // Show error
+                        }
+                    });
+                }
+            });
+
+            // Enable sending messages by pressing Enter
+            $('#user-input').keypress(function (e) {
+                if (e.which === 13) {
+                    $('#send-button').click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

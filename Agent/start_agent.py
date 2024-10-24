@@ -10,7 +10,7 @@ from select_tools import tools, tool_names
 from callbacks import CustomAsyncIteratorCallbackHandler
 
 # read from _prompt.txt as system_prompt
-with open("/home/zsl/Agent/Data/prompt.txt", "r") as f:
+with open("/home/zsl/Agent/Agent/Data/prompt.txt", "r") as f:
     system_prompt = f.read()
 
 #解析system_promot文档   其中intermediate_steps是中间步骤
@@ -47,34 +47,16 @@ agent_executor = AgentExecutor.from_agent_and_tools(
     verbose=True,
     memory=memory,
 )
-print(
-    agent_executor.invoke(
-        {"input": "杭州天气怎么样？"
-        }
-    )
-)
-# print(
-#     agent_executor.invoke(
-#         {
-#             "input": "/home/wch/3.8t_1/Workspace/wch/data/数据集/med/med1/m1/m1_00000.png 里面有多少条鱼"
-#         }
-#     )
-# )
-# print(
-#     agent_executor.invoke(
-#         {
-#             "input": "/home/wch/3.8t_1/Workspace/wch/fish_llm/langchainchat/fish.mp4 分析下视频里鱼的运动状态"
-#         }
-#     )
-# )
 
-# print(
-#     agent_executor.invoke(
-#         {
-#             "input": "位移: 1100.6507699115045 cm, 速度: 25.38264690265487 cm/s, 摆尾速度: 259.6637168141593 Hz, 加速度: 680.922315929204 cm/s²,平均检测到的鱼数量: 23  这是鱼的运动状态给我鱼的投喂策略"
-#         }
-#     )
-# )
 
-# print(agent_executor.invoke({"input": "2024年诺贝奖得主是谁"}))
+# response = agent_executor.invoke({"input": "杭州天气怎么样？"})
+# print("输入：",response["input"])
+# print("回答：",response["output"])
+# print("历史记忆：",response["history"])
+
+
+response = agent_executor.invoke({"input": "该视频里鱼的四个行为参数/home/zsl/Agent/Agent/fish.mp4"})
+print("输入：",response["input"])
+print("回答：",response["output"])
+print("历史记忆：",response["history"])
 

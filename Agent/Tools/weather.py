@@ -28,8 +28,8 @@ def weather(location: str, api_key: str):
 def weathercheck(location: str):
     return weather(location, SENIVERSE_API_KEY)
 
-class WeatherInput(BaseModel):
-    location: str = Field(description="City name or coordinates in 'latitude:longitude' format")
+# class WeatherInput(BaseModel):
+#     location: str = Field(description="City name or coordinates in 'latitude:longitude' format")
 
 if __name__ == "__main__":
     print(weathercheck("合肥"))
