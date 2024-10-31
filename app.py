@@ -11,7 +11,7 @@ from callbacks import CustomAsyncIteratorCallbackHandler
 from flask import Flask, request, jsonify, render_template
 
 # 从 _prompt.txt 读取 system_prompt
-with open("/home/zsl/Agent/Agent/Data/prompt.txt", "r") as f:
+with open("/home/zsl/Agent/Data/prompt.txt", "r") as f:
     system_prompt = f.read()
 
 # 解析 system_prompt 文档

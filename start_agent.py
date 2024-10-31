@@ -48,8 +48,5 @@ agent_executor = AgentExecutor.from_agent_and_tools(
     memory=memory,
 )
 
-response = agent_executor.invoke({"input": "该视频里鱼的四个行为参数/home/zsl/Agent/Agent/fish.mp4"})
-print("输入：",response["input"])
-print("回答：",response["output"])
-print("历史记忆：",response["history"])
+print(agent_executor.invoke("计算1500*3"))  # 验证HumanFaceLandmark 人脸特征识别
 
