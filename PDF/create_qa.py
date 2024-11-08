@@ -3,36 +3,29 @@ import json
 import os 
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+from colorama import Fore, Back, Style, init
 folder_path = os.getenv("FOLDER_PATH", "/home/zsl/Agent/PDF/paper_md")
 output_file = "/home/zsl/Agent/PDF/qa.json"
 output_tep = []
 
 
+
 def format_final_answer(final_answer):
-    # 使用正则表达式匹配每个问题，确保能够正确分隔问题
-    pattern = r"(\d+)\.\s*\*\*(.*?)\*\*\s*([^\d]+)"  # 匹配带编号的和不带编号的描述
+    # 使用正则表达式匹配每个问题，包括最后一个问题
+    pattern = r"(\d+)\.\s+\*\*(.*?)\*\*\s*([^\d]+?)(?=\n\d+\.|\Z)"
     questions = []
-    
+
     # 使用 re.findall 查找所有匹配的内容
     matches = re.findall(pattern, final_answer, re.DOTALL)
     
-    question_num = 1  # 初始化问题编号
     for match in matches:
-        if match[0]:  # 处理带编号的问题
-            question_title = match[1].strip()
-            description = match[2].strip()
-            full_question = f"{question_num}. {question_title} {description}"
-            question_num += 1
-        else:  # 处理未带编号的问题
-            question_title = match[1].strip()
-            full_question = f"{question_num}. {question_title}"
-            question_num += 1
-
-        # 将每个问题加入到问题列表
-        questions.append(full_question.strip())
+        question_text = f"**{match[1].strip()}** {match[2].strip()}"  # 重构问题内容
+        questions.append(question_text)
 
     return questions
+
+
+
 
 
 def clean_json_string(json_string):
@@ -48,6 +41,7 @@ def clean_json_string(json_string):
         # Try to parse the JSON as is
         json.loads(json_string)
         return json_string
+    
     except json.JSONDecodeError:
         # If parsing fails, try to fix common issues
 
@@ -95,6 +89,8 @@ agent = QAagent()
 chat_historty = []
 
 def process_file(filename):
+    # 这里使用局部变量 output_results 存储当前文件处理结果
+    output_results = []
     try:
         print(f"处理文件: {filename}")
         file_path = os.path.join(folder_path, filename)
@@ -117,39 +113,32 @@ def process_file(filename):
 以下是需要分析的渔业相关内容:
 {md_content}
 请生成5个符合上述要求的复杂专业问题。
-
-示例问题：
-1. 在鱼类智能投喂系统的研究中，机器学习的算法如何帮助优化鱼类摄食行为识别和投喂策略？请结合相关的监测技术和数据驱动模型进行说明。
-2. 如何通过环境监测数据来优化鱼类的投喂计划？请结合实际案例分析。
                 """
             },
         ]
         
         # 获取第一个 Agent 的问题
         questions = agent.generate_q(PROMPT_Q)
+        print(Fore.LIGHTGREEN_EX,questions)
         # print("生成的初始问题:", questions)
         # 第二阶段：让第二个 Agent 评估并提供反馈
 
         PROMPT_F = [
             {
                 "role": "system",
-                "content": f"""以下是第一个模型根据{md_content}生成的渔业相关专业问题。请对每个问题进行审查，帮助优化问题的专业性、清晰度和讨论价值。具体审查角度如下：
-
-1. 评估问题的专业性：问题是否符合渔业领域的最新研究趋势，是否具有足够的技术深度？
-2. 检查问题的清晰度：问题是否表述清晰，易于理解？如果有模糊之处，请指出并给出改进建议。
+                "content": f"""以下是第一个模型根据{md_content}生成的渔业相关专业问题。请对每个问题进行审查，具体审查角度如下：
+1. 检查问题的清晰度：问题是否表述清晰，易于理解？如果有模糊之处，请指出并给出改进建议。
 3. 分析问题的可讨论性：问题是否能够引发技术专家之间的深入讨论？如果问题过于简单或过于复杂，提供平衡的建议。
 4. 评估问题的广度与深度：问题是否能够覆盖渔业领域中的核心技术和原理？是否避免了过于狭窄或过于广泛的提问？
-5. 创新性与实际应用：问题是否提出了新的技术视角或现实应用的挑战？如果问题偏向理论性，请考虑如何增加实际应用的相关性。
-
 请根据以下问题逐一分析和提供反馈：
 {questions}
-
 只需要提供你对每个问题最终的修改建议或优化方向，帮助提高其质量，而审查过程不用阐述"""
             }
         ]
         
         # 获取第二个 Agent 的反馈
         feedback = agent.reflect_q(PROMPT_F)
+        print(Fore.BLUE,feedback)
         # print("第二个 Agent 的反馈:", feedback)
 
         # 第三阶段：根据反馈修改问题，要求生成修改后的问题
@@ -161,25 +150,22 @@ def process_file(filename):
             {
                 "role": "user",
                 "content": f"""
-以下是反馈建议，请根据这些建议重新修改并生成5个复杂的渔业相关专业问题：
+以下是反馈建议，请根据这些建议重新对你生成的5个问题进行优化：
 
 反馈建议：
 {feedback}
 
-请根据这些修改建议，生成新的问题。每个问题应涵盖以下要素：
-1. 问题应具有更高的技术深度。
-2. 问题应避免模糊不清的表述。
-3. 问题应具备更高的讨论性，并能引发技术专家的深入讨论。
+请根据这些修改建议，生成优化后的问题。每个问题都应该按照反馈建议进行一定优化：
                 """
             },
         ]
         
         # 获取修改后的问题
         final_questions = agent.generate_q(PROMPT_Q_MODIFIED)
-        print(final_questions)
+        print(Fore.CYAN,final_questions)
         format_final_questions = format_final_answer(final_questions)
         escaped_filename = escape_filename(filename)
-        print(format_final_questions)
+        print(Fore.GREEN,format_final_questions)
         print(len(format_final_questions))
         for question in format_final_questions:
             PROMPT_A=[
@@ -228,14 +214,13 @@ def process_file(filename):
             ]
             answer = agent.generate_q(PROMPT_A)
             cleaned_json = clean_json_string(answer)
-            print("======", cleaned_json)
             json_data = json.loads(cleaned_json)
             json_data["version"] = "1.1-dev"
             json_data["参考来源"] = [f"{os.path.splitext(escaped_filename)[0]}.pdf"]
             if json_data:
-                output_tep.append(json_data)
-                print(f"成功生成题目 ({filename}): {ak[:50]}...")
-        return output_tep
+                output_results.append(json_data)  # 将当前问题的处理结果添加到局部变量里
+                print(f"成功生成题目 ({filename}): {question[:50]}...")
+        return output_results  # 返回局部变量中的结果
     except Exception as e:
         print(f"Error processing file {filename}: {e}")
         return []
@@ -252,7 +237,7 @@ try:
         for future in as_completed(futures):
             result = future.result()
             if result:
-                output_tep.extend(result)
+                output_tep.extend(result)  # 将每个文件的结果添加到全局变量 output_tep
 
     # 将结果写入文件
     with open(output_file, "w", encoding="utf-8") as file:
