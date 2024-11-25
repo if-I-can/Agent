@@ -33,7 +33,7 @@ BASE_REFLECTION_SYSTEM_PROMPT = """
 如果用户的内容没有问题且不需要更改，输出：[yes]。
 """
 
-class QAagent():
+class reflect_agent():
     def __init__(self,model="deepseek-chat"):
         self.clint = OpenAI(base_url = os.getenv("OPENAI_API_BASE"),api_key = os.getenv("OPENAI_API_KEY"))
         self.model = model
@@ -79,19 +79,19 @@ class QAagent():
         
         return generation_history[-1]["role"]
 
-agent = QAagent()
+# agent = reflect_agent()
 
 
-user_msg = "大口黑鲈的投喂策略"
-generation_system_prompt = ("你是一位水产养殖饲料投喂专员，请帮我给出一些饲料投喂建议,每次回答时前面加上（投喂专员:)")
-reflection_system_prompt = "你是专业的水产养殖专家，请对一个普通水产养殖专员提出的投喂建议进行批判,语气可以强烈一点，每次回答时前面加上（专家：）"
+# user_msg = "大口黑鲈的投喂策略"
+# generation_system_prompt = ("你是一位水产养殖饲料投喂专员，请帮我给出一些饲料投喂建议,每次回答时前面加上（投喂专员:)")
+# reflection_system_prompt = "你是专业的水产养殖专家，请对一个普通水产养殖专员提出的投喂建议进行批判,语气可以强烈一点，每次回答时前面加上（专家：）"
 
-final_response = agent.run(
-    user_msg=user_msg,
-    generation_system_prompt=generation_system_prompt,
-    reflection_system_prompt=reflection_system_prompt,
-    n_steps=10,
-    verbose=1,
-)
+# final_response = agent.run(
+#     user_msg=user_msg,
+#     generation_system_prompt=generation_system_prompt,
+#     reflection_system_prompt=reflection_system_prompt,
+#     n_steps=10,
+#     verbose=1,
+# )
 
-print(final_response)
+# print(final_response)

@@ -9,44 +9,87 @@ from custom_parser import CustomOutputParser, CustomPromptTemplate
 from select_tools import tools, tool_names
 from callbacks import CustomAsyncIteratorCallbackHandler
 
-# read from _prompt.txt as system_prompt
-with open("/home/zsl/Agent/Data/prompt.txt", "r") as f:
-    system_prompt = f.read()
 
-#解析system_promot文档   其中intermediate_steps是中间步骤
-prompt_template_agent = CustomPromptTemplate(template=system_prompt,tools=tools,input_variables=["input", "intermediate_steps", "history"],)
+class react_agent:
+    def __init__(self, system_prompt_path="/home/zsl/Agent/Data/prompt.txt",api_key="sk-027ac6afb5bc4cfb8ccb0b51fc3c5b26", model_name="deepseek-chat", api_base="https://api.deepseek.com"):
+        # 读取 system_prompt 文档
+        self.system_prompt = self.load_system_prompt(system_prompt_path)
+        
+        # 设置回调处理器
+        self.callback = CustomAsyncIteratorCallbackHandler()
 
-# 根据用户输入得到规划
-callback = CustomAsyncIteratorCallbackHandler()
+        # 初始化DeepSeek模型
+        self.model = ChatOpenAI(
+            model_name=model_name,
+            verbose=True,
+            callbacks=[self.callback],
+            temperature=0.0,
+            openai_api_base=api_base,
+            openai_api_key=api_key,
+        )
 
-# 生成答案的模型需求
-model = ChatOpenAI(
-    model_name="deepseek-chat",  # Replace with the correct DeepSeek model name
-    verbose=True,
-    callbacks=[callback],
-    temperature=0.0,
-    openai_api_base="https://api.deepseek.com",  # Directly set the DeepSeek API base URL
-    openai_api_key="sk-027ac6afb5bc4cfb8ccb0b51fc3c5b26",  # Directly set the DeepSeek API key
-)
+        # 配置Prompt模板和链
+        self.prompt_template_agent = CustomPromptTemplate(
+            template=self.system_prompt, tools=tools, input_variables=["input", "intermediate_steps", "history"]
+        )
+        self.llm_chain = LLMChain(llm=self.model, prompt=self.prompt_template_agent)
+
+        # 输出解析器
+        self.output_parser = CustomOutputParser()
+
+        # 创建Agent
+        self.react_agent = LLMSingleActionAgent(
+            llm_chain=self.llm_chain,
+            output_parser=self.output_parser,
+            stop=["\nObservation:", "Observation"],
+            allowed_tools=tool_names,
+        )
+
+        # 设置内存
+        self.memory = ConversationBufferWindowMemory(k=0)
+
+        # 创建AgentExecutor
+        self.agent_executor = AgentExecutor.from_agent_and_tools(
+            agent=self.react_agent,
+            tools=tools,
+            verbose=True,
+            memory=self.memory,
+        )
+
+    def load_system_prompt(self, path):
+        """从文件中加载 system_prompt"""
+        with open(path, "r") as f:
+            return f.read()
+
+    def invoke(self, input_text):
+        """通过代理执行输入任务并返回结果"""
+        return self.agent_executor.invoke(input_text)
+
+    def add_tools(self, new_tools):
+        """向现有代理添加工具"""
+        self.react_agent.allowed_tools.extend(new_tools)
+
+    def set_memory_window(self, k):
+        """设置内存窗口的大小"""
+        self.memory.k = k
+
+    def get_agent_info(self):
+        """获取当前代理的基本信息"""
+        return {
+            "model_name": self.model.model_name,
+            "api_base": self.model.openai_api_base,
+            "allowed_tools": self.react_agent.allowed_tools,
+            "memory_window": self.memory.k,
+        }
 
 
-llm_chain = LLMChain(llm=model, prompt=prompt_template_agent)
-output_parser = CustomOutputParser()
-# plant_json = re.sub(r"^```json\s*|\s*```$", "", plan_text, flags=re.MULTILINE)
-agent = LLMSingleActionAgent(
-    llm_chain=llm_chain,
-    output_parser=output_parser,
-    stop=["\nObservation:", "Observation"],
-    allowed_tools=tool_names,
-)
+# 示例用法
+if __name__ == "__main__":
+    # 初始化代理管理器
+    agent_manager = react_agent()
 
-memory = ConversationBufferWindowMemory(k=0)
-agent_executor = AgentExecutor.from_agent_and_tools(
-    agent=agent,
-    tools=tools,
-    verbose=True,
-    memory=memory,
-)
+    # 执行任务
+    result = agent_manager.invoke("检测图像/home/zsl/Agent/generated/image/20241119_d6ed.png")
+    print("Result:", result)
 
-print(agent_executor.invoke("计算1500*3"))  # 验证HumanFaceLandmark 人脸特征识别
 
