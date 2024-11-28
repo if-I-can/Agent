@@ -67,23 +67,44 @@ def home():
 @app.route('/api/agent', methods=['POST'])
 def invoke_agent():
     user_input = request.json.get('input')
-    
-    # Ensure input is provided
+
+    # 确保输入是有效的
     if not user_input:
         return jsonify({"error": "No input provided"}), 400
-    
-    # Invoke agent_executor and get response
+
+    # 调用 agent_executor 获取响应
     try:
+        # 假设 agent_executor 是一个已经初始化并可以调用的对象
         response = agent_executor.invoke({"input": user_input})
-        response_out = response["output"]
-        conclusion_match = re.search(r"结论：\s*(.+)", response_out)
-        if conclusion_match:
-            conclusion = conclusion_match.group(1)
+        response_out = response.get("output", "")
+
+        # 使用正则表达式提取"主要内容"和"结论"
+        conclusion_match1 = re.search(r"主要内容：\s*(.+)", response_out)
+        conclusion_match2 = re.search(r"结论：\s*(.+)", response_out)
+        additional_info_match = re.search(r"补充信息：\s*(.+)", response_out)
+
+        # 定义结论变量
+        conclusion = ""
+
+        # 将找到的内容拼接成一个自然的句子
+        if conclusion_match1:
+            conclusion += conclusion_match1.group(1)
+        
+        if additional_info_match:
+            conclusion += " " + additional_info_match.group(1)
+        
+        if conclusion_match2:
+            conclusion += " " + conclusion_match2.group(1)
+
+        # 如果结论不为空，返回结论；否则，返回"未查询到"
+        if conclusion:
+            return jsonify({"output": conclusion}), 200
         else:
-            conclusion = "未查询到"
-        return jsonify({"output": conclusion})
+            return jsonify({"output": "未查询到"}), 404
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)

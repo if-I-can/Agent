@@ -34,3 +34,5 @@ openmm系列工具：计算器，AIGC类，检测类 ……
 | 大模型下载          |download_llm.py            |
 |大模型测试|test_llm.py|
 |前端|app.py|
+
+![鱼的图片](./demo.png)
