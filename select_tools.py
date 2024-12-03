@@ -134,6 +134,12 @@ tools = [
         description="基于视觉内容回答问题，输入格式：图像URL和问题文本。",
         # args_schema=openmmInput,
     ),
+    Tool.from_function(
+        func=Database,
+        name="database",
+        description="确定是独立回答还是基于知识库回答，输入格式 知识库",
+        # args_schema=openmmInput,
+    ),
 ]
 
 tool_names = [tool.name for tool in tools]

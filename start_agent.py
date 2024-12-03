@@ -88,7 +88,7 @@ if __name__ == "__main__":
     agent_manager = react_agent()
 
     # 执行任务
-    result = agent_manager.invoke("检测图像/home/zsl/Agent/generated/image/20241119_d6ed.png")
+    result = agent_manager.invoke("请根据知识库回答如何提升无畏契约技术")
     print("Result:", result)
 
 

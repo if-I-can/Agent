@@ -76,6 +76,7 @@ def invoke_agent():
     try:
         # 假设 agent_executor 是一个已经初始化并可以调用的对象
         response = agent_executor.invoke({"input": user_input})
+        # print("resonse is:",response)
         response_out = response.get("output", "")
 
         # 使用正则表达式提取"主要内容"和"结论"

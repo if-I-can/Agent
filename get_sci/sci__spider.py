@@ -18,7 +18,7 @@ from cache import Cache
 from crossref import title_doi_journal
 
 
-def sci_spider(savedrec_html_filepath, dir='./documents', robot_url=None, user_agent='sheng', proxies=None, num_retries=2,
+def sci_spider(savedrec_html_filepath, dir='./Immune system of rainbow trout', robot_url=None, user_agent='sheng', proxies=None, num_retries=2,
                 delay=3, start_url='www.sci-hub.wf', useSSL=True, get_link=get_link_xpath,
                nolimit=False, cache=None):
     """
@@ -37,7 +37,7 @@ def sci_spider(savedrec_html_filepath, dir='./documents', robot_url=None, user_a
     :param cache: 一个缓存类对象，在此代码块中我们完全把它当作字典使用
     """
     print('trying to collect the doi list...')
-    doi_list = title_doi_journal("fish feeding behaviour and deep learning",rows=100)  # 得到 doi 列表
+    doi_list = title_doi_journal("Immune system of rainbow trout",rows=100)  # 得到 doi 列表
     if not doi_list:
         print('doi list is empty, crawl aborted...')
     else:
