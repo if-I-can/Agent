@@ -854,5 +854,10 @@
 "https://www.sci-hub.se/10.1016/0145-305x(84)90012-0": "https://moscow.sci-hub.se/1965/64c411a36bc97ca453049db48c7f03b9/blazer1984.pdf?download=true",
 "https://www.sci-hub.se/10.1016/s0378-4274(02)00044-9": "https://dacemirror.sci-hub.se/journal-article/21f4945368ec4dc621cd4d483cbb44dd/10.1016@s0378-42740200044-9.pdf?download=true",
 "https://www.sci-hub.se/10.1111/j.1365-2761.2009.01117.x": "https://moscow.sci-hub.se/914/f753e7861cab4766af267fe546486029/del-pozo2010.pdf?download=true",
-"https://www.sci-hub.se/10.1016/0042-6989(93)90042-u": "https://2024.sci-hub.se/1957/99886f8702acd7e45c6db28e3066e303/wagner1993.pdf?download=true"
+"https://www.sci-hub.se/10.1016/0042-6989(93)90042-u": "https://2024.sci-hub.se/1957/99886f8702acd7e45c6db28e3066e303/wagner1993.pdf?download=true",
+"https://www.sci-hub.se/10.1016/0145-305x(94)90214-3": "https://moscow.sci-hub.se/1965/4246761f0f82a4fa624dba84d86775f9/i6-seasonal-changes-in-the-immune-system-of-rainbow-trout-1994.pdf?download=true",
+"https://www.sci-hub.se/10.1016/s1050-4648(02)00143-2": "https://moscow.sci-hub.se/1795/287e85f4fb1104186816eaf76e0fd231/kiryu2003.pdf?download=true",
+"https://www.sci-hub.se/10.1016/s0165-2427(01)00422-6": "https://moscow.sci-hub.se/1754/3ede57978b0b721b8e1839ef87de9c35/10.1016@s0165-24270100422-6.pdf?download=true",
+"https://www.sci-hub.se/10.1111/j.1365-2052.2011.02314.x": "https://dacemirror.sci-hub.se/journal-article/54b0be020a9c91a96d0c88f535c8902c/phillips2012.pdf?download=true",
+"https://www.sci-hub.se/10.1016/s0044-8486(03)00032-2": "https://moscow.sci-hub.se/1745/8c433962bd97d29150b41a1b45a3a1a7/leonardi2003.pdf?download=true"
 }

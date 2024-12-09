@@ -15,7 +15,7 @@ content: 1. 爬取doi列表由原来的html变为了txt文件，用re的模式�
 from download import sci_hub_crawler
 from scraping_using_lxml import get_link_xpath
 from cache import Cache
-from crossref import title_doi_journal
+from impact_facter import get_dois_and_impact_factors
 
 
 def sci_spider(savedrec_html_filepath, dir='./Immune system of rainbow trout', robot_url=None, user_agent='sheng', proxies=None, num_retries=2,
@@ -37,7 +37,9 @@ def sci_spider(savedrec_html_filepath, dir='./Immune system of rainbow trout', r
     :param cache: 一个缓存类对象，在此代码块中我们完全把它当作字典使用
     """
     print('trying to collect the doi list...')
-    doi_list = title_doi_journal("Immune system of rainbow trout",rows=100)  # 得到 doi 列表
+    doi_list = get_dois_and_impact_factors("Immune system of rainbow trout",rows=100)  # 得到 doi 列表
+    doi_list_sort_jcr = sorted(doi_list, key=lambda x: x[2])
+    doi_list_sort_factor = sorted(doi_list, key=lambda x: x[1])
     if not doi_list:
         print('doi list is empty, crawl aborted...')
     else:
