@@ -3,6 +3,7 @@ import urllib.parse
 import json
 from impact_factor.core import Factor  # 导入影响因子查询工具
 
+
 def test_headers_only(doi):
     encoded_doi = urllib.parse.quote(doi)
     api_urls = f"https://api.crossref.org/works?filter=has-full-text:true&mailto=1786293993@qq.com"
@@ -94,19 +95,13 @@ def get_dois_and_impact_factors(keyword, rows=100):
 if __name__ == "__main__":
     # 你可以修改关键词来搜索不同的文献
     keyword = "fish feeding behaviour and deep learning"
-    
+
     # 获取 DOIs 和影响因子列表
     result = get_dois_and_impact_factors(keyword, rows=100)
 
     sorted_by_factor = sorted(result, key=lambda x: x[1], reverse=True)
     print(sorted_by_factor)
-# 按照分区排序 (从Q1到Q4，假设Q1为最高)
+
+    # 按照分区排序 (从Q1到Q4，假设Q1为最高)
     sorted_by_jcr = sorted(result, key=lambda x: x[2])
     # print(result[0])
-
-    # # 打印结果
-    # if result:
-    #     for res in result:
-    #         print(res)
-    # else:
-    #     print("没有找到相关的文献或影响因子信息。")

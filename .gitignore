@@ -1,28 +1,13 @@
 /qwen/
 /__pycache__/
 /mumu-fish-llm-web/
-get_sci/breeding_of_mandarin_fish_and_trout
-get_sci/Gene_of_Rainbow_Trout
+get_sci/data_origin/
+get_sci/jcr
+get_sci/test_pdf
 /BAAI/
 /PDF/paper_md/extracted_tables.md
 /get_sci/test_pdf/
-get_sci/Aquaculture Diseases of Rainbow Trout/
-get_sci/Aquaculture sustainability for rainbow trout/
-get_sci/Aquatic Food Safety in Rainbow Trout/
-get_sci/FCR (Feed Conversion Ratio) in Rainbow Trout/
-get_sci/Habitat suitability for rainbow trout/
-get_sci/Harvesting and processing rainbow trout/
-get_sci/Immune system of rainbow trout/
-get_sci/Migration patterns of rainbow trout/
-get_sci/Preventive measures for trout health/
-get_sci/Rainbow Trout Disease Management/
-get_sci/Rainbow Trout Growth Performance/
-get_sci/Rainbow Trout Nutrition/
-get_sci/Rainbow Trout/
-get_sci/Rainbow trout farming methods/
-get_sci/Salmonid fish behavior/
-get_sci/Spawning behavior in rainbow trout/
-get_sci/Stocking density in trout farms/
-get_sci/Trout genetic diversity/
+/get_sci/dataser_origin/
 /PDF/
 test_markdown1/
+dataset_origin/

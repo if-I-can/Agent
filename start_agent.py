@@ -90,5 +90,3 @@ if __name__ == "__main__":
     # 执行任务
     result = agent_manager.invoke("请根据知识库回答如何提升无畏契约技术")
     print("Result:", result)
-
-

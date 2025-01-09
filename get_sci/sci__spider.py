@@ -1,68 +1,261 @@
 """
-update date: 2024/03/21
-Author: Xu Chenchen
-content: 1. start_url sci-hub.wf要改为www.sci-hub.wf
-        2. 调整了download.py，scraping_using_lxml.py的测试用例
-        3. 在我的pycharm上遇到了Process finished with exit code -1073741819 (0xC0000005)，不是代码的问题，暂时无解，所以直接用cmd/conda Prompt运行代码
-
-update date: 2021/08/05
-Author: Xu Chenchen
-content: 1. 爬取doi列表由原来的html变为了txt文件，用re的模式来识别doi(稳定性比html低)
-        2. 下载的pdf文件可以自主确定文件路径(新增功能)，sci_spider设置pdf存储路径为默认参数
-        3. 改动细节详见各个代码
+SCI-HUB论文下载工具
+Author: Xu Chenchen (Modified)
+功能：根据关键词从Crossref获取DOI，然后从sci-hub下载对应的PDF文件
 """
+import os
+import re
+import json
+import time
+import requests
+import urllib.parse
+from urllib.robotparser import RobotFileParser
+from urllib.parse import urlparse
+from typing import Optional, Dict, List
+from lxml.html import fromstring
 
-from download import sci_hub_crawler
-from scraping_using_lxml import get_link_xpath
-from cache import Cache
-from impact_facter import get_dois_and_impact_factors
+# ================ 文件名处理 ================
+def get_valid_filename(filename: str, name_len: int = 128) -> str:
+    """生成合法的文件名"""
+    return re.sub(r'[^0-9A-Za-z\-,._;]', '_', filename)[:name_len]
+
+# ================ 缓存处理 ================
+
+class Cache:
+    def __init__(self, cache_dir: str):
+        self.cache_dir = cache_dir
+        self.cache = self.read_cache()
+
+    def __getitem__(self, url: str) -> Optional[str]:
+        return self.cache.get(url)
+
+    def __setitem__(self, key: str, value: str):
+        """保存数据到缓存"""
+        self.cache[key] = value
+        try:
+            with open(self.cache_dir, 'w', encoding='utf-8') as fp:
+                json.dump(self.cache, fp, indent=2)
+        except Exception as e:
+            print(f'缓存写入错误: {e}')
+
+    def read_cache(self) -> dict:
+        """从磁盘加载缓存"""
+        try:
+            if os.path.exists(self.cache_dir):
+                if os.path.getsize(self.cache_dir):
+                    with open(self.cache_dir, 'r', encoding='utf-8') as fp:
+                        return json.load(fp)
+            with open(self.cache_dir, 'w', encoding='utf-8'):
+                return {}
+        except Exception as e:
+            print(f'缓存读取错误: {e}')
+            return {}
+
+# ================ HTML解析 ================
+def get_link_xpath(html: str) -> Optional[Dict]:
+    """使用xpath解析sci-hub页面获取下载链接"""
+    try:
+        tree = fromstring(html)
+        a = tree.xpath('//div[@id="buttons"]/button')
+        if len(a) == 0:
+            a = tree.xpath('//div[@id="buttons"]/ul/li/a')
+
+        if len(a) == 0:
+            print('抱歉，sci-hub暂未收录此文章。')
+            return None
+
+        for a_unit in a:
+            onclick = a_unit.get('onclick')
+            if onclick:
+                break
+
+        onclick = re.findall(r"location.href\s*=\s*'(.*?)'", onclick)[0]
+        title = tree.xpath('//div[@id="citation"]/i/text()')
+        if len(title) == 0:
+            title = tree.xpath('//div[@id="citation"]/text()')
+        return {'title': title[0], 'onclick': onclick}
+    except Exception as e:
+        print(f'解析错误: {e}')
+        return None
+
+# ================ 下载功能 ================
+def doi_parser(doi: str, start_url: str, useSSL: bool = True) -> str:
+    """将DOI转换为URL"""
+    protocol = 'https' if useSSL else 'http'
+    return f"{protocol}://{start_url}/{doi}"
+
+def get_robot_parser(robot_url: str) -> Optional[RobotFileParser]:
+    """获取robots.txt解析器"""
+    try:
+        rp = RobotFileParser()
+        rp.set_url(robot_url)
+        rp.read()
+        return rp
+    except Exception as e:
+        print(f'robots.txt解析错误: {e}')
+        return None
+
+def wait(url: str, delay: int = 3, domains: dict = None) -> None:
+    """控制下载间隔"""
+    if domains is None:
+        domains = {}
+    domain = urlparse(url).netloc
+    last_accessed = domains.get(domain)
+    if delay > 0 and last_accessed is not None:
+        sleep_secs = delay - (time.time() - last_accessed)
+        if sleep_secs > 0:
+            time.sleep(sleep_secs)
+    domains[domain] = time.time()
+
+def download(url: str, headers: dict, proxies: dict = None, num_retries: int = 2) -> Optional[str]:
+    """下载网页内容"""
+    print(f'正在下载页面: {url}')
+    try:
+        response = requests.get(url, headers=headers, proxies=proxies, verify=False)
+        if response.status_code >= 400:
+            if num_retries and 500 <= response.status_code < 600:
+                return download(url, headers, proxies, num_retries-1)
+            print(f'下载失败，状态码: {response.status_code}')
+            return None
+        return response.text
+    except requests.exceptions.RequestException as e:
+        print(f'下载错误: {e}')
+        return None
+
+def download_pdf(result: Dict, headers: dict, dir: str, proxies: dict = None, 
+                num_retries: int = 2, doi: str = None) -> bool:
+    """下载PDF文件"""
+    url = result['onclick']
+    if not urlparse(url).scheme:
+        url = f'https:{url}'
+    url = url.replace('\\', '')
+    
+    print(f'正在下载文件: {url}')
+    try:
+        response = requests.get(url, headers=headers, proxies=proxies, verify=False)
+        if response.status_code >= 400:
+            if num_retries and 500 <= response.status_code < 600:
+                return download_pdf(result, headers, dir, proxies, num_retries-1, doi)
+            print(f'文件下载失败，状态码: {response.status_code}')
+            return False
+
+        filename = get_valid_filename(result['title'] if len(result['title']) >= 5 else doi) + '.pdf'
+        path = os.path.join(dir, filename)
+        
+        with open(path, 'wb') as fp:
+            fp.write(response.content)
+        print(f'文件已保存: {path}')
+        return True
+    except requests.exceptions.RequestException as e:
+        print(f'文件下载错误: {e}')
+        return False
+
+# ================ Crossref API ================
+def get_dois_from_crossref(keyword: str, rows: int = 100) -> list:
+    """从Crossref获取DOI列表"""
+    api_url = f"https://api.crossref.org/works?query={urllib.parse.quote(keyword)}&filter=has-full-text:true&rows={rows}&mailto=1786293993@qq.com"
+    
+    try:
+        response = requests.get(api_url, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        works = data["message"].get("items", [])
+        doi_list = [work.get("DOI") for work in works if work.get("DOI")]
+        return doi_list
+    except Exception as e:
+        print(f"获取DOI列表时出错: {e}")
+        return []
 
 
-def sci_spider(savedrec_html_filepath, dir='./Immune system of rainbow trout', robot_url=None, user_agent='sheng', proxies=None, num_retries=2,
-                delay=3, start_url='www.sci-hub.wf', useSSL=True, get_link=get_link_xpath,
-               nolimit=False, cache=None):
-    """
-    给定一个文献索引导出文件 (来自 Web of Science)，(按照DOI)下载文献对应的 pdf文件 (来自 sci-hub)
-    :param savedrec_html_filepath: 搜索结果的导出文件 (.txt)，其中含有文献记录 (每一条记录可能有doi，也可能没有)
-    :param robot_url: robots.txt在sci-bub上的url
-    :param user_agent: 用户代理，不要设为 'Twitterbot'
-    :param proxies: 代理
-    :param num_retries: 下载重试次数
-    :param delay: 下载间隔时间
-    :param start_url: sci-hub 主页域名
-    :param useSSL: 是否开启 SSL，开启后HTTP协议名称为 'https'
-    :param get_link: 抓取下载链接的函数对象，调用方式 get_link(html) -> html -- 请求的网页文本
-                     所使用的函数在 scraping_using_%s.py % (bs4, lxml, regex) 内，默认用xpath选择器
-    :param nolimit: do not be limited by robots.txt if True
-    :param cache: 一个缓存类对象，在此代码块中我们完全把它当作字典使用
-    """
-    print('trying to collect the doi list...')
-    doi_list = get_dois_and_impact_factors("Immune system of rainbow trout",rows=100)  # 得到 doi 列表
-    doi_list_sort_jcr = sorted(doi_list, key=lambda x: x[2])
-    doi_list_sort_factor = sorted(doi_list, key=lambda x: x[1])
+# ================ 主要功能 ================
+def sci_hub_crawler(doi_list: List[str], dir: str, robot_url: str = None, 
+                   user_agent: str = 'sheng', proxies: dict = None,
+                   num_retries: int = 2, delay: int = 3, 
+                   start_url: str = 'www.sci-hub.wf',
+                   useSSL: bool = True, nolimit: bool = False, 
+                   cache: Cache = None) -> None:
+    """下载指定DOI列表的论文"""
+    headers = {'User-Agent': user_agent}
+    protocol = 'https' if useSSL else 'http'
+    
+    if not robot_url:
+        robot_url = f"{protocol}://{start_url}/robots.txt"
+    
+    rp = get_robot_parser(robot_url)
+    domains = {}
+    download_succ_cnt = 0
+    
+    os.makedirs(dir, exist_ok=True)
+    
+    print('开始遍历DOI列表...')
+    for doi in doi_list:
+        url = doi_parser(doi, start_url, useSSL)
+        
+        if cache and cache[url]:
+            print(f'已下载过: {cache[url]}')
+            download_succ_cnt += 1
+            continue
+            
+        if rp and rp.can_fetch(user_agent, url) or nolimit:
+            wait(url, delay, domains)
+            html = download(url, headers, proxies, num_retries)
+            result = get_link_xpath(html)
+            
+            if result and download_pdf(result, headers, dir, proxies, num_retries, doi):
+                if cache:
+                    cache[url] = f'https:{result["onclick"]}'
+                download_succ_cnt += 1
+        else:
+            print(f'被robots.txt拦截: {url}')
+            
+    print(f'下载完成：共{len(doi_list)}篇文献，成功下载{download_succ_cnt}篇')
+
+def sci_spider(keyword: str, dir: str = './downloaded_papers', 
+              robot_url: str = None, user_agent: str = 'sheng',
+              proxies: dict = None, num_retries: int = 2,
+              delay: int = 3, start_url: str = 'www.sci-hub.wf',
+              useSSL: bool = True, nolimit: bool = False,
+              cache: Cache = None) -> None:
+    """主函数：根据关键词搜索并下载论文"""
+    print('正在收集DOI列表...')
+    doi_list = get_dois_from_crossref(keyword, rows=100)
+    
     if not doi_list:
-        print('doi list is empty, crawl aborted...')
-    else:
-        print('doi_crawler process succeed.')
-        print('now trying to download the pdf files from sci-hub...')
-        sci_hub_crawler(doi_list, dir, robot_url, user_agent, proxies, num_retries, delay, start_url,
-                    useSSL, get_link, nolimit, cache)
-    print('Done.')
+        print('DOI列表为空，爬取终止...')
+        return
+    
+    print(f'DOI收集成功，共找到 {len(doi_list)} 篇文献')
+    print('正在从sci-hub下载PDF文件...')
+    
+    os.makedirs(dir, exist_ok=True)
+    
+    try:
+        sci_hub_crawler(doi_list, dir, robot_url, user_agent, proxies, 
+                       num_retries, delay, start_url, useSSL, nolimit, cache)
+        print('下载完成！')
+    except Exception as e:
+        print(f'下载过程中出现错误: {e}')
 
 if __name__ == '__main__':
-
-    from time import time
-    start = time()
-    filepath = '/home/zsl/Agent/sci_dl/sci-hub-crawler/version2.3/data.txt'  # doi所在的原始 txt (由web-of-science 搜索结果导出的plain text file)
-    cache_dir = './cache.txt'  # 缓存路径(可更改名称，不可改扩展名)
-    # start_url = 'www.sci-hub.wf'
-    start_url = 'www.sci-hub.se'
+    # 禁用SSL警告
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    
+    start = time.time()
+    
+    # 设置参数
+    keyword = "Immune system of rainbow trout"
+    save_dir = r"E:\agent_dragon\LLM_dataset\downloaded_papers"  # 文件保存目录
+    cache_dir = r"E:\agent_dragon\LLM_dataset\cache.txt"  # 缓存路径
+    start_url = 'www.sci-hub.se'  # 或 'www.sci-hub.wf'
+    
+    # 创建缓存对象
     cache = Cache(cache_dir)
-    sci_spider(filepath, start_url=start_url, nolimit=True, cache=cache)
-    print('time spent: %ds' % (time() - start))
-
-
-
-
-
-
+    
+    # 执行爬取
+    try:
+        sci_spider(keyword, dir=save_dir, start_url=start_url, nolimit=True, cache=cache)
+    except Exception as e:
+        print(f'程序执行出错: {e}')
+    
+    print('总耗时: %ds' % (time.time() - start))
